@@ -1,0 +1,61 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme inline {
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-space-grotesk);
+  --font-mono: var(--font-jetbrains-mono);
+
+  /*
+   * The app's single design system (no light/dark toggle — this is the
+   * only theme). Token names match the original dashboard redesign spec;
+   * Tailwind auto-generates bg-, text-, and border- utilities from each
+   * --color- entry (e.g. bg-surface, text-text-primary). Values below are
+   * the clean white/blue light palette — every component already consumes
+   * these token names rather than raw Tailwind colors, so changing the
+   * values here re-themes the whole app without touching each file.
+   */
+  --color-bg: #f7f8fb;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f3f4f8;
+  --color-border: #e5e7eb;
+  --color-text-primary: #111827;
+  --color-text-secondary: #6b7280;
+  --color-accent-primary: #4f46e5;
+  --color-accent-success: #059669;
+  --color-accent-warning: #d97706;
+  --color-accent-danger: #dc2626;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/*
+ * Elements render in their final state by default (via inline style / base
+ * class); these animations only override that starting point when the
+ * visitor hasn't asked for reduced motion.
+ */
+@keyframes ring-draw {
+  from {
+    stroke-dashoffset: var(--ring-circumference);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ring-animated {
+    animation: ring-draw 1s ease-out forwards;
+  }
+  .rise-in {
+    animation: rise-in 0.5s ease-out forwards;
+  }
+}

@@ -1,0 +1,1 @@
+export const MAX_SYLLABUS_FILE_SIZE = 10 * 1024 * 1024; // 10MB
