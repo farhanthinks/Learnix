@@ -9,7 +9,6 @@ import {
   Flame,
   Plus,
   TrendingUp,
-  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -18,6 +17,12 @@ import { useMemo, useState } from "react";
 import { SummaryCard } from "@/components/study-plan/summary-card";
 import { MainSchedule } from "@/components/study-plan/main-schedule";
 import { WeekOverview } from "@/components/study-plan/week-overview";
+import {
+  defaultScheduleFilters,
+  hasActiveScheduleFilters,
+  ScheduleFiltersBar,
+  type ScheduleFilterState,
+} from "@/components/study-plan/schedule-filters";
 import { StudyPlanHealthCard } from "@/components/study-plan/study-plan-health-card";
 import {
   UpcomingDeadlinesCard,
@@ -66,7 +71,9 @@ export function StudyPlanShell({
     null,
   );
   const [editSessionId, setEditSessionId] = useState<string | null>(null);
-  const [subjectFilter, setSubjectFilter] = useState(initialSubjectFilter);
+  const [filters, setFilters] = useState<ScheduleFilterState>(() =>
+    defaultScheduleFilters(initialSubjectFilter?.id ?? null),
+  );
 
   const todayIso = formatDateISO(new Date());
 
@@ -76,12 +83,18 @@ export function StudyPlanShell({
   );
 
   const visibleSessions = useMemo(
-    () => (subjectFilter ? sessions.filter((s) => s.subjectId === subjectFilter.id) : sessions),
-    [sessions, subjectFilter],
+    () =>
+      sessions.filter((s) => {
+        if (filters.subjectId && s.subjectId !== filters.subjectId) return false;
+        if (filters.status !== "all" && s.status !== filters.status) return false;
+        if (filters.difficulty !== "all" && s.difficulty !== filters.difficulty) return false;
+        return true;
+      }),
+    [sessions, filters],
   );
 
   const todaySessions = useMemo(
-    () => visibleSessions.filter((s) => s.date === todayIso),
+    () => visibleSessions.filter((s) => s.date === todayIso && s.type !== "break"),
     [visibleSessions, todayIso],
   );
   const todayPlannedMinutes = useMemo(
@@ -200,9 +213,11 @@ export function StudyPlanShell({
     onDelete: deleteSession,
   };
 
-  function clearSubjectFilter() {
-    setSubjectFilter(null);
-    router.replace("/dashboard/study-plan");
+  function handleFiltersChange(next: ScheduleFilterState) {
+    setFilters(next);
+    if (next.subjectId === null) {
+      router.replace("/dashboard/study-plan");
+    }
   }
 
   return (
@@ -221,20 +236,6 @@ export function StudyPlanShell({
           Export to Calendar
         </a>
       </header>
-
-      {subjectFilter && (
-        <div className="bg-accent-primary/10 text-accent-primary flex w-fit items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium">
-          Filtered by: {subjectFilter.name}
-          <button
-            type="button"
-            onClick={clearSubjectFilter}
-            aria-label="Clear subject filter"
-            className="hover:text-accent-primary/70"
-          >
-            <X className="h-3.5 w-3.5" strokeWidth={2.5} />
-          </button>
-        </div>
-      )}
 
       <GeneratePlanPrompt subjects={subjectsNeedingPlan} />
 
@@ -334,33 +335,49 @@ export function StudyPlanShell({
         </div>
       </div>
 
+      <ScheduleFiltersBar filters={filters} onChange={handleFiltersChange} subjects={subjects} />
+
       {visibleSessions.length === 0 ? (
         <div className="border-border bg-surface flex flex-col items-center gap-3 rounded-2xl border py-16 text-center">
           <CalendarDays className="text-text-secondary h-8 w-8" strokeWidth={1.5} />
           <div>
             <p className="text-text-primary text-sm font-semibold">
-              {subjectFilter
-                ? `No sessions for ${subjectFilter.name} yet`
+              {hasActiveScheduleFilters(filters)
+                ? "No sessions match your filters"
                 : "Your study plan is empty"}
             </p>
             <p className="text-text-secondary mt-1 text-sm">
-              Create a personalized plan from your subjects and start studying smarter.
+              {hasActiveScheduleFilters(filters)
+                ? "Try adjusting or clearing your filters."
+                : "Create a personalized plan from your subjects and start studying smarter."}
             </p>
           </div>
           <div className="mt-1 flex gap-2">
-            <Link
-              href="/dashboard/subjects"
-              className="bg-accent-primary inline-flex w-auto items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white hover:brightness-110"
-            >
-              Generate Study Plan
-            </Link>
-            <button
-              type="button"
-              onClick={() => openCreate(new Date())}
-              className="border-border text-text-primary hover:bg-surface-raised inline-flex w-auto items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
-            >
-              + Add Session
-            </button>
+            {hasActiveScheduleFilters(filters) ? (
+              <button
+                type="button"
+                onClick={() => handleFiltersChange(defaultScheduleFilters())}
+                className="bg-accent-primary inline-flex w-auto items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white hover:brightness-110"
+              >
+                Clear Filters
+              </button>
+            ) : (
+              <>
+                <Link
+                  href="/dashboard/subjects"
+                  className="bg-accent-primary inline-flex w-auto items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white hover:brightness-110"
+                >
+                  Generate Study Plan
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => openCreate(new Date())}
+                  className="border-border text-text-primary hover:bg-surface-raised inline-flex w-auto items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
+                >
+                  + Add Session
+                </button>
+              </>
+            )}
           </div>
         </div>
       ) : (

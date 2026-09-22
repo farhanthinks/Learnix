@@ -13,7 +13,13 @@ export interface PreviousAttemptData {
   timeTakenSeconds: number | null;
 }
 
-export function PreviousAttemptsTable({ attempts }: { attempts: PreviousAttemptData[] }) {
+export function PreviousAttemptsTable({
+  attempts,
+  showSubject = true,
+}: {
+  attempts: PreviousAttemptData[];
+  showSubject?: boolean;
+}) {
   if (attempts.length === 0) {
     return (
       <div className="border-border bg-surface rounded-2xl border p-8 text-center">
@@ -26,14 +32,13 @@ export function PreviousAttemptsTable({ attempts }: { attempts: PreviousAttemptD
 
   return (
     <div className="border-border bg-surface overflow-x-auto rounded-2xl border">
-      <table className="w-full min-w-[640px] text-left">
+      <table className="w-full min-w-[560px] text-left">
         <thead>
           <tr className="border-border text-text-secondary border-b text-xs">
             <th className="px-4 py-3 font-medium">Quiz</th>
-            <th className="px-4 py-3 font-medium">Subject</th>
+            {showSubject && <th className="px-4 py-3 font-medium">Subject</th>}
             <th className="px-4 py-3 font-medium">Date</th>
             <th className="px-4 py-3 font-medium">Score</th>
-            <th className="px-4 py-3 font-medium">Correct</th>
             <th className="px-4 py-3 font-medium">Time Taken</th>
             <th className="py-3 pr-4 text-right font-medium">Review</th>
           </tr>
@@ -42,14 +47,13 @@ export function PreviousAttemptsTable({ attempts }: { attempts: PreviousAttemptD
           {attempts.map((a) => (
             <tr key={a.attemptId} className="text-sm">
               <td className="text-text-primary px-4 py-3 font-medium">{a.quizTitle}</td>
-              <td className="text-text-secondary px-4 py-3">{a.subjectName}</td>
+              {showSubject && <td className="text-text-secondary px-4 py-3">{a.subjectName}</td>}
               <td className="text-text-secondary px-4 py-3">
                 {formatDate(a.completedAt.slice(0, 10))}
               </td>
               <td className="text-text-primary px-4 py-3 font-mono">
                 {a.score}/{a.totalQuestions}
               </td>
-              <td className="text-text-secondary px-4 py-3">{a.score}</td>
               <td className="text-text-secondary px-4 py-3">
                 {a.timeTakenSeconds !== null ? formatDurationSeconds(a.timeTakenSeconds) : "—"}
               </td>

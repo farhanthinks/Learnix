@@ -15,6 +15,8 @@ export function StudyTimeWeekCard({
   minutes: number;
   className?: string;
 }) {
+  const avgPerDay = Math.round(minutes / 7);
+
   return (
     <Tile className={`flex flex-col items-center gap-2 text-center ${className}`} padding="p-6">
       <h3 className="text-text-secondary text-sm font-medium">Study Time (This Week)</h3>
@@ -24,7 +26,7 @@ export function StudyTimeWeekCard({
       <p className="text-text-primary font-mono text-2xl font-bold">
         {formatHoursMinutes(minutes)}
       </p>
-      <p className="text-text-secondary text-xs">Total time spent</p>
+      <p className="text-text-secondary text-xs">Avg. {formatHoursMinutes(avgPerDay)}/day</p>
     </Tile>
   );
 }

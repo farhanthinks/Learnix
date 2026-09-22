@@ -79,13 +79,17 @@ export async function extractTopicsWithGroq(syllabusText: string): Promise<Extra
     { role: "user", content: `Syllabus text:\n\n${syllabusText}` },
   ];
 
+  const BASE_MAX_TOKENS = 8192;
+  const RETRY_MAX_TOKENS = 16384;
+
   let raw: string;
+  let truncatedByLength = false;
   try {
     const completion = await groq.chat.completions.create({
       model: MODEL,
       messages,
       temperature: 0.2,
-      max_completion_tokens: 4096,
+      max_completion_tokens: BASE_MAX_TOKENS,
       // gpt-oss-120b is a reasoning model: without these, it can burn the
       // whole token budget on hidden chain-of-thought and return empty
       // content. "hidden" keeps reasoning out of the content field entirely.
@@ -93,18 +97,23 @@ export async function extractTopicsWithGroq(syllabusText: string): Promise<Extra
       reasoning_format: "hidden",
     });
     raw = completion.choices[0]?.message?.content ?? "";
+    truncatedByLength = completion.choices[0]?.finish_reason === "length";
   } catch {
     return { error: UNAVAILABLE_ERROR };
   }
 
-  let parsed = tryParse(raw);
+  let parsed = truncatedByLength ? null : tryParse(raw);
 
   if (!parsed) {
+    // A large syllabus can produce more JSON than BASE_MAX_TOKENS allows —
+    // retrying with the same budget would just get cut off again, so widen
+    // it whenever the first attempt was a length cutoff rather than a
+    // formatting mistake.
     try {
       const retryCompletion = await groq.chat.completions.create({
         model: MODEL,
         temperature: 0.2,
-        max_completion_tokens: 4096,
+        max_completion_tokens: truncatedByLength ? RETRY_MAX_TOKENS : BASE_MAX_TOKENS,
         reasoning_effort: "low",
         reasoning_format: "hidden",
         messages: [
@@ -112,8 +121,9 @@ export async function extractTopicsWithGroq(syllabusText: string): Promise<Extra
           { role: "assistant", content: raw },
           {
             role: "user",
-            content:
-              "Your previous response was not valid JSON matching the required shape. Reply again with ONLY the corrected JSON object — no markdown, no explanation.",
+            content: truncatedByLength
+              ? "Your previous response was cut off before it finished. Reply again with the complete JSON object from the start — no markdown, no explanation."
+              : "Your previous response was not valid JSON matching the required shape. Reply again with ONLY the corrected JSON object — no markdown, no explanation.",
           },
         ],
       });

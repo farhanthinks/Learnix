@@ -21,6 +21,12 @@ const STATUS_DOT: Record<TopicStatus, string> = {
   done: "bg-accent-success",
 };
 
+const ACTION_LABEL: Record<TopicStatus, string> = {
+  pending: "Start",
+  in_progress: "Continue",
+  done: "Done",
+};
+
 export function TodayPlanTile({
   className = "",
   items,
@@ -30,7 +36,17 @@ export function TodayPlanTile({
 }) {
   return (
     <Tile className={className} padding="p-6">
-      <h2 className="font-display text-text-primary text-base font-semibold">Today&apos;s Plan</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-text-primary text-base font-semibold">
+          Today&apos;s Plan
+        </h2>
+        <Link
+          href="/dashboard/study-plan"
+          className="text-accent-primary text-xs font-medium hover:underline"
+        >
+          View full plan →
+        </Link>
+      </div>
 
       {items.length === 0 ? (
         <div className="mt-4 flex flex-col items-center gap-3 py-8 text-center">
@@ -49,7 +65,7 @@ export function TodayPlanTile({
           </Link>
         </div>
       ) : (
-        <ul className="divide-border mt-4 flex flex-col divide-y">
+        <ul className="divide-border mt-3 flex max-h-[360px] flex-col divide-y overflow-y-auto">
           {items.map((item) => (
             <li key={item.id}>
               <Link
@@ -65,6 +81,15 @@ export function TodayPlanTile({
                 </div>
                 <span className="text-text-secondary shrink-0 font-mono text-xs">
                   {item.plannedMinutes}m
+                </span>
+                <span
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap ${
+                    item.status === "done"
+                      ? "bg-accent-success/10 text-accent-success"
+                      : "bg-accent-primary/10 text-accent-primary"
+                  }`}
+                >
+                  {ACTION_LABEL[item.status]}
                 </span>
               </Link>
             </li>

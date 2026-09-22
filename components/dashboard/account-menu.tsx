@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, Settings as SettingsIcon, User } from "lucide-react";
+import { LogOut, Settings as SettingsIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -61,15 +61,6 @@ export function AccountMenu({
             <p className="text-text-secondary truncate text-xs">{email}</p>
           </div>
           <div className="flex flex-col gap-0.5 p-1.5">
-            <Link
-              href="/dashboard/profile"
-              role="menuitem"
-              onClick={() => setOpen(false)}
-              className="text-text-secondary hover:bg-surface-raised hover:text-text-primary flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors"
-            >
-              <User className="h-[18px] w-[18px]" strokeWidth={2} />
-              Profile Settings
-            </Link>
             <Link
               href="/dashboard/settings"
               role="menuitem"

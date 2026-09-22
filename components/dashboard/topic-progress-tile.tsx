@@ -2,8 +2,8 @@ import type { CSSProperties } from "react";
 
 import { Tile } from "@/components/dashboard/tile";
 
-const SIZE = 110;
-const STROKE = 10;
+const SIZE = 92;
+const STROKE = 9;
 const RADIUS = (SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
@@ -32,7 +32,7 @@ export function TopicProgressTile({
   return (
     <Tile className={className} padding="p-6">
       <h2 className="font-display text-text-primary text-base font-semibold">Topic Progress</h2>
-      <div className="mt-4 flex items-center gap-6">
+      <div className="mt-3 flex items-center gap-5">
         <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} className="shrink-0">
           <circle
             cx={SIZE / 2}
@@ -61,7 +61,7 @@ export function TopicProgressTile({
             y="50%"
             textAnchor="middle"
             dominantBaseline="central"
-            className="fill-text-primary font-mono text-xl font-bold"
+            className="fill-text-primary font-mono text-lg font-bold"
           >
             {percent}%
           </text>

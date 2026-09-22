@@ -11,7 +11,7 @@ export function Tile({
 }) {
   return (
     <div
-      className={`border-border bg-surface rounded-2xl border ${padding} hover:bg-surface-raised shadow-black/20 transition-[background-color,box-shadow] duration-150 ease-out hover:shadow-lg ${className}`}
+      className={`border-border bg-surface hover:border-accent-primary/30 rounded-2xl border ${padding} transition-colors duration-150 ${className}`}
     >
       {children}
     </div>

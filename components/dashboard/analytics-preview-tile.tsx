@@ -48,8 +48,8 @@ export function AnalyticsPreviewTile({
           View Analytics
         </Link>
       </div>
-      <div className="mt-4">
-        <ResponsiveContainer width="100%" height={220}>
+      <div className="mt-3">
+        <ResponsiveContainer width="100%" height={170}>
           <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="4 4" stroke="#E5E7EB" vertical={false} />
             <XAxis

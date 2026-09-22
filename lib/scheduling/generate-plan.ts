@@ -1,3 +1,4 @@
+import { toMinutes } from "@/lib/scheduling/slot-conflict";
 import type { StudyDay, TopicDifficulty } from "@/types/database";
 
 export interface TopicForScheduling {
@@ -7,14 +8,31 @@ export interface TopicForScheduling {
   subtopics: string[] | null;
 }
 
+export interface BreakPreferences {
+  enabled: boolean;
+  minutes: number;
+  frequency: number; // insert a break after every `frequency` sessions
+}
+
+export const NO_BREAKS: BreakPreferences = { enabled: false, minutes: 0, frequency: 1 };
+
 export interface PlannedSession {
   topic_id: string;
   scheduled_date: string; // YYYY-MM-DD
   planned_minutes: number;
+  start_time: string; // HH:MM
+  end_time: string; // HH:MM
+}
+
+export interface PlannedBreak {
+  scheduled_date: string;
+  start_time: string;
+  end_time: string;
 }
 
 export interface GeneratePlanResult {
   sessions?: PlannedSession[];
+  breaks?: PlannedBreak[];
   error?: string;
 }
 
@@ -33,6 +51,13 @@ function toDateString(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function minutesToTime(totalMinutes: number): string {
+  const clamped = Math.max(0, Math.min(24 * 60 - 1, totalMinutes));
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 /**
@@ -69,6 +94,13 @@ function effortUnits(topic: TopicForScheduling): number {
   return base + subtopicBonus;
 }
 
+/** How many breaks land on a day with this many chained sessions — one after
+ * every `frequency`-th session, never a trailing break after the last one. */
+function breaksForSessionCount(sessionCount: number, breaks: BreakPreferences): number {
+  if (!breaks.enabled || sessionCount <= 1) return 0;
+  return Math.floor((sessionCount - 1) / breaks.frequency);
+}
+
 /**
  * Deterministic, rules-based scheduler (no AI involved):
  *
@@ -77,20 +109,25 @@ function effortUnits(topic: TopicForScheduling): number {
  *    so the cumulative unit count is spread evenly and proportionally —
  *    a topic worth 3 units naturally spans more of the timeline (and often
  *    more distinct days) than a 1-unit topic.
- * 3. Whatever units land on the same day split that day's
- *    `dailyStudyMinutes` between them, so a day's total stays close to what
- *    the user said they have available, and units for the harder topic on
- *    that day still take a proportionally bigger slice.
+ * 3. Whatever units land on the same day split that day's study-minutes
+ *    budget between them — reduced up front by however many breaks that
+ *    day will need, so the day's chained sessions-plus-breaks still fit
+ *    inside `dailyStudyMinutes`.
  * 4. Units for the same topic that land on the same day are merged into a
  *    single study_plans row.
+ * 5. Each day's merged sessions are then chained sequentially starting at
+ *    `dayStartTime`, with a break inserted after every `frequency`-th
+ *    session (never after the last one that day) when breaks are enabled.
  *
  * Topics are processed in unit_no order so the plan roughly follows the
- * syllabus's own sequence.
+ * syllabus's own sequence, and that same order drives same-day chaining.
  */
 export function generateStudyPlan(
   topics: TopicForScheduling[],
   availableDays: Date[],
   dailyStudyMinutes: number,
+  dayStartTime: string = "18:00",
+  breakPrefs: BreakPreferences = NO_BREAKS,
 ): GeneratePlanResult {
   if (availableDays.length === 0) {
     return { error: "There aren't enough study days before the exam date to generate a plan." };
@@ -115,29 +152,82 @@ export function generateStudyPlan(
   }
 
   const unitsPerDayIndex = new Map<number, number>();
+  const distinctTopicsPerDay = new Map<number, Set<string>>();
   for (const a of dayAssignments) {
     unitsPerDayIndex.set(a.dayIndex, (unitsPerDayIndex.get(a.dayIndex) ?? 0) + 1);
+    const set = distinctTopicsPerDay.get(a.dayIndex) ?? new Set<string>();
+    set.add(a.topicId);
+    distinctTopicsPerDay.set(a.dayIndex, set);
   }
 
-  const grouped = new Map<string, PlannedSession>();
+  const adjustedMinutesPerDay = new Map<number, number>();
+  for (const [dayIndex, topicSet] of distinctTopicsPerDay) {
+    const sessionCount = topicSet.size;
+    const breaksCount = breaksForSessionCount(sessionCount, breakPrefs);
+    const breakMinutesTotal = breaksCount * breakPrefs.minutes;
+    adjustedMinutesPerDay.set(
+      dayIndex,
+      Math.max(dailyStudyMinutes - breakMinutesTotal, sessionCount * MIN_SESSION_MINUTES),
+    );
+  }
+
+  const grouped = new Map<string, { topicId: string; dayIndex: number; minutes: number }>();
   for (const a of dayAssignments) {
     const dayUnitCount = unitsPerDayIndex.get(a.dayIndex) ?? 1;
+    const dayMinutesBudget = adjustedMinutesPerDay.get(a.dayIndex) ?? dailyStudyMinutes;
     const perUnitMinutes = Math.max(
       MIN_SESSION_MINUTES,
-      Math.round(dailyStudyMinutes / dayUnitCount),
+      Math.round(dayMinutesBudget / dayUnitCount),
     );
     const key = `${a.topicId}|${a.dayIndex}`;
     const existing = grouped.get(key);
     if (existing) {
-      existing.planned_minutes += perUnitMinutes;
+      existing.minutes += perUnitMinutes;
     } else {
-      grouped.set(key, {
-        topic_id: a.topicId,
-        scheduled_date: toDateString(availableDays[a.dayIndex]),
-        planned_minutes: perUnitMinutes,
-      });
+      grouped.set(key, { topicId: a.topicId, dayIndex: a.dayIndex, minutes: perUnitMinutes });
     }
   }
 
-  return { sessions: Array.from(grouped.values()) };
+  const sessionsByDay = new Map<number, { topicId: string; minutes: number }[]>();
+  for (const chunk of grouped.values()) {
+    const list = sessionsByDay.get(chunk.dayIndex) ?? [];
+    list.push({ topicId: chunk.topicId, minutes: chunk.minutes });
+    sessionsByDay.set(chunk.dayIndex, list);
+  }
+
+  const sessions: PlannedSession[] = [];
+  const breaksOut: PlannedBreak[] = [];
+  const dayStartMinutes = toMinutes(dayStartTime);
+
+  for (const [dayIndex, dayChunks] of sessionsByDay) {
+    const dateStr = toDateString(availableDays[dayIndex]);
+    let cursor = dayStartMinutes;
+
+    dayChunks.forEach((chunk, i) => {
+      const start = cursor;
+      const end = start + chunk.minutes;
+      sessions.push({
+        topic_id: chunk.topicId,
+        scheduled_date: dateStr,
+        planned_minutes: chunk.minutes,
+        start_time: minutesToTime(start),
+        end_time: minutesToTime(end),
+      });
+      cursor = end;
+
+      const isLast = i === dayChunks.length - 1;
+      if (breakPrefs.enabled && !isLast && (i + 1) % breakPrefs.frequency === 0) {
+        const breakStart = cursor;
+        const breakEnd = breakStart + breakPrefs.minutes;
+        breaksOut.push({
+          scheduled_date: dateStr,
+          start_time: minutesToTime(breakStart),
+          end_time: minutesToTime(breakEnd),
+        });
+        cursor = breakEnd;
+      }
+    });
+  }
+
+  return { sessions, breaks: breaksOut };
 }

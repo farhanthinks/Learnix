@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  BarChart3,
   BookOpen,
   BookText,
   CalendarDays,
@@ -23,7 +22,6 @@ const NAV_ITEMS = [
   { label: "Progress", href: "/dashboard/analytics", icon: TrendingUp },
   { label: "AI Answer Book", href: "/dashboard/answer-book", icon: BookText },
   { label: "Quizzes", href: "/dashboard/quizzes", icon: Target },
-  { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { label: "AI Assistant", href: "/dashboard/assistant", icon: MessageSquare },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];

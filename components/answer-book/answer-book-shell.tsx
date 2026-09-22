@@ -6,23 +6,18 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AskAiPanel } from "@/components/answer-book/ask-ai-panel";
 import { ExamplesTab } from "@/components/answer-book/examples-tab";
-import { FlashcardsModal, type Flashcard } from "@/components/answer-book/flashcards-modal";
 import { GenerateNotesPrompt } from "@/components/answer-book/generate-notes-prompt";
 import { KeyPointsTab } from "@/components/answer-book/key-points-tab";
-import { ProgressCard } from "@/components/answer-book/progress-card";
 import { QaTab } from "@/components/answer-book/qa-tab";
-import { QuickActionsCard } from "@/components/answer-book/quick-actions-card";
-import { QuizModal } from "@/components/answer-book/quiz-modal";
 import { StudyNotesTab } from "@/components/answer-book/study-notes-tab";
 import { SummaryTab } from "@/components/answer-book/summary-tab";
 import { TocSidebar } from "@/components/answer-book/toc-sidebar";
 import { DifficultyBadge } from "@/components/subjects/difficulty-badge";
-import type { AttemptSummary } from "@/components/topics/quiz-panel";
 import { extractHeadings } from "@/lib/answer-book/headings";
 import { formatDurationLabel } from "@/lib/calendar/session";
 import { formatRelativeTime } from "@/lib/format";
 import { estimateTopicMinutes } from "@/lib/topics/estimate";
-import type { QuizQuestion, TopicDifficulty, TopicStatus } from "@/types/database";
+import type { TopicDifficulty } from "@/types/database";
 
 export interface TopicNotesData {
   content: string;
@@ -40,37 +35,26 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "notes", label: "Study Notes" },
   { key: "summary", label: "Summary" },
   { key: "keypoints", label: "Key Points" },
-  { key: "examples", label: "Examples" },
   { key: "qa", label: "Important Q&A" },
+  { key: "examples", label: "Examples" },
 ];
 
 export function AnswerBookShell({
   subjectSlug,
   subjectName,
-  subjectId,
   topic,
   initialNotes,
-  quiz,
-  questions,
-  attemptSummary,
-  timeSpentMinutes,
 }: {
   subjectSlug: string;
   subjectName: string;
-  subjectId: string;
   topic: {
     id: string;
     title: string;
     unitTitle: string | null;
     subtopics: string[] | null;
     difficulty: TopicDifficulty;
-    status: TopicStatus;
   };
   initialNotes: TopicNotesData | null;
-  quiz: { id: string } | null;
-  questions: QuizQuestion[];
-  attemptSummary: AttemptSummary | null;
-  timeSpentMinutes: number;
 }) {
   const [notes, setNotes] = useState(initialNotes);
   const [activeTab, setActiveTab] = useState<TabKey>("notes");
@@ -78,12 +62,7 @@ export function AnswerBookShell({
   const [regenerateError, setRegenerateError] = useState<string | null>(null);
   const [isSavingBookmark, setIsSavingBookmark] = useState(false);
   const [askAiOpen, setAskAiOpen] = useState(false);
-  const [flashcardsOpen, setFlashcardsOpen] = useState(false);
-  const [quizOpen, setQuizOpen] = useState(false);
   const [pendingScrollId, setPendingScrollId] = useState<string | null>(null);
-  const [addToPlanState, setAddToPlanState] = useState<"idle" | "saving" | "done" | "error">(
-    "idle",
-  );
 
   const headings = useMemo(() => (notes ? extractHeadings(notes.content) : []), [notes]);
 
@@ -157,59 +136,19 @@ export function AnswerBookShell({
     }
   }
 
-  async function handleAddToStudyPlan() {
-    setAddToPlanState("saving");
-    const minutes = estimateTopicMinutes({
-      difficulty: topic.difficulty,
-      subtopics: topic.subtopics,
-    });
-    const today = new Date();
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const scheduledDate = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
-    const startTime = "18:00";
-    const endMinutes = 18 * 60 + minutes;
-    const endTime = `${pad(Math.floor(endMinutes / 60) % 24)}:${pad(endMinutes % 60)}`;
-
-    try {
-      const res = await fetch("/api/calendar-events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: topic.title,
-          subjectId,
-          scheduledDate,
-          startTime,
-          endTime,
-          eventType: "study",
-          difficulty: topic.difficulty,
-        }),
-      });
-      setAddToPlanState(res.ok ? "done" : "error");
-    } catch {
-      setAddToPlanState("error");
-    }
-  }
-
-  const flashcards: Flashcard[] = useMemo(() => {
-    if (!notes) return [];
-    const fromQa = notes.qa.map((q) => ({ front: q.question, back: q.answer }));
-    const fromKeyPoints = notes.keyPoints.map((p) => ({ front: "Key Point", back: p }));
-    return [...fromQa, ...fromKeyPoints];
-  }, [notes]);
-
   const estimatedMinutes = estimateTopicMinutes({
     difficulty: topic.difficulty,
     subtopics: topic.subtopics,
   });
 
   return (
-    <div className="bg-bg mx-auto flex w-full max-w-[1500px] flex-1 flex-col gap-5 px-6 py-8">
+    <div className="bg-bg mx-auto flex w-full max-w-[1300px] flex-1 flex-col gap-5 px-6 py-8">
       <nav className="text-text-secondary flex flex-wrap items-center gap-1.5 text-sm">
         <Link href="/dashboard/answer-book" className="hover:text-text-primary">
           AI Answer Book
         </Link>
         <span>›</span>
-        <Link href={`/dashboard/subjects/${subjectSlug}`} className="hover:text-text-primary">
+        <Link href={`/dashboard/answer-book/${subjectSlug}`} className="hover:text-text-primary">
           {subjectName}
         </Link>
         <span>›</span>
@@ -297,7 +236,7 @@ export function AnswerBookShell({
 
       {regenerateError && <p className="text-accent-danger text-sm">{regenerateError}</p>}
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_300px]">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_260px]">
         <div className="min-w-0">
           <div className="border-border no-print overflow-x-auto border-b">
             <div className="flex w-max gap-1">
@@ -340,50 +279,26 @@ export function AnswerBookShell({
               ) : (
                 <EmptyTabPlaceholder onGoToNotes={() => setActiveTab("notes")} />
               ))}
-            {activeTab === "examples" &&
-              (notes ? (
-                <ExamplesTab markdown={notes.examples} />
-              ) : (
-                <EmptyTabPlaceholder onGoToNotes={() => setActiveTab("notes")} />
-              ))}
             {activeTab === "qa" &&
               (notes ? (
                 <QaTab items={notes.qa} />
               ) : (
                 <EmptyTabPlaceholder onGoToNotes={() => setActiveTab("notes")} />
               ))}
+            {activeTab === "examples" &&
+              (notes ? (
+                <ExamplesTab markdown={notes.examples} />
+              ) : (
+                <EmptyTabPlaceholder onGoToNotes={() => setActiveTab("notes")} />
+              ))}
           </div>
         </div>
 
-        <aside className="no-print flex flex-col gap-5">
+        <aside className="no-print">
           <TocSidebar
             headings={headings}
             isNotesTabActive={activeTab === "notes"}
             onNavigate={handleTocNavigate}
-          />
-          <QuickActionsCard
-            onGenerateQuiz={() => setQuizOpen(true)}
-            onCreateFlashcards={() => setFlashcardsOpen(true)}
-            onAddToStudyPlan={handleAddToStudyPlan}
-            onDownloadNotes={() => window.print()}
-          />
-          {addToPlanState !== "idle" && (
-            <p
-              className={`-mt-3 text-xs ${addToPlanState === "error" ? "text-accent-danger" : "text-accent-success"}`}
-            >
-              {addToPlanState === "saving"
-                ? "Adding to study plan..."
-                : addToPlanState === "done"
-                  ? "Added to today's study plan."
-                  : "Could not add to study plan."}
-            </p>
-          )}
-          <ProgressCard
-            topicId={topic.id}
-            timeSpentMinutes={timeSpentMinutes}
-            questionsSolved={attemptSummary?.bestScore ?? 0}
-            questionsTotal={attemptSummary?.total ?? questions.length}
-            status={topic.status}
           />
         </aside>
       </div>
@@ -393,18 +308,6 @@ export function AnswerBookShell({
           topicId={topic.id}
           topicTitle={topic.title}
           onClose={() => setAskAiOpen(false)}
-        />
-      )}
-      {flashcardsOpen && (
-        <FlashcardsModal cards={flashcards} onClose={() => setFlashcardsOpen(false)} />
-      )}
-      {quizOpen && (
-        <QuizModal
-          topicId={topic.id}
-          quiz={quiz}
-          questions={questions}
-          attemptSummary={attemptSummary}
-          onClose={() => setQuizOpen(false)}
         />
       )}
 

@@ -32,7 +32,7 @@ export function ExamCountdownTile({
   if (!upcoming) {
     return (
       <div
-        className={`border-border bg-surface flex flex-col items-start justify-center gap-2 rounded-2xl border p-7 ${className}`}
+        className={`border-border bg-surface flex flex-col items-start justify-center gap-2 rounded-2xl border p-6 ${className}`}
       >
         <p className="text-text-secondary text-sm">No exams scheduled</p>
         <Link
@@ -51,17 +51,17 @@ export function ExamCountdownTile({
 
   return (
     <div
-      className={`from-accent-primary relative flex flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br to-[#4338CA] p-7 text-white ${className}`}
+      className={`bg-accent-primary relative flex flex-col justify-between overflow-hidden rounded-2xl p-6 text-white ${className}`}
     >
       <div className="flex flex-col gap-1">
         <p className="text-sm font-medium text-white/80">Days to Exam</p>
-        <p className="rise-in font-mono text-6xl font-bold">{daysRemaining}</p>
+        <p className="rise-in font-mono text-5xl font-bold">{daysRemaining}</p>
       </div>
       <div>
-        <p className="text-sm font-semibold">{upcoming.name}</p>
+        <p className="truncate text-sm font-semibold">{upcoming.name}</p>
         <p className="text-xs text-white/80">{formatDate(upcoming.exam_date)}</p>
       </div>
-      <CalendarDays className="absolute right-5 bottom-5 h-9 w-9 text-white/25" strokeWidth={1.5} />
+      <CalendarDays className="absolute right-5 bottom-5 h-8 w-8 text-white/25" strokeWidth={1.5} />
     </div>
   );
 }

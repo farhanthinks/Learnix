@@ -18,10 +18,10 @@ export function WeekOverview({
   const selectedIso = formatDateISO(selectedDate);
 
   return (
-    <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+    <div className="flex w-full gap-1">
       {weekDays.map((d, i) => {
         const iso = formatDateISO(d);
-        const daySessions = sessions.filter((s) => s.date === iso);
+        const daySessions = sessions.filter((s) => s.date === iso && s.type !== "break");
         const isSelected = iso === selectedIso;
         const allDone = daySessions.length > 0 && daySessions.every((s) => s.status === "done");
 
@@ -32,7 +32,7 @@ export function WeekOverview({
             aria-pressed={isSelected}
             aria-label={`${SHORT_WEEKDAY[i]} ${d.getDate()}, ${daySessions.length} ${daySessions.length === 1 ? "session" : "sessions"}`}
             onClick={() => onSelectDate(d)}
-            className={`flex h-[104px] min-w-[42px] flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border transition-colors ${
+            className={`flex h-[104px] min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-xl border transition-colors ${
               isSelected
                 ? "bg-accent-primary border-accent-primary text-white"
                 : "border-border bg-surface text-text-primary hover:bg-surface-raised"

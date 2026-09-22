@@ -6,7 +6,7 @@ import { Tile } from "@/components/dashboard/tile";
 const ACTIONS = [
   { label: "Study Plan", href: "/dashboard/study-plan", icon: CalendarDays },
   { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
-  { label: "AI Answer Book", href: "/dashboard/subjects", icon: BookText },
+  { label: "AI Answer Book", href: "/dashboard/answer-book", icon: BookText },
   { label: "AI Assistant", href: "/dashboard/assistant", icon: MessageSquare },
 ];
 
@@ -14,7 +14,7 @@ export function QuickActionsTile({ className = "" }: { className?: string }) {
   return (
     <Tile className={className} padding="p-6">
       <h2 className="font-display text-text-primary text-base font-semibold">Quick Actions</h2>
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3">
         {ACTIONS.map((action) => {
           const Icon = action.icon;
           return (

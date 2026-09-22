@@ -1,23 +1,39 @@
-import { MessageSquare } from "lucide-react";
+import { redirect } from "next/navigation";
 
-import { Card } from "@/components/ui/card";
+import { AssistantShell, type AssistantSubjectData } from "@/components/assistant/assistant-shell";
+import { createClient } from "@/lib/supabase/server";
 
-export default function AssistantComingSoonPage() {
-  return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-8 py-8">
-      <div>
-        <h1 className="font-display text-text-primary text-2xl font-bold">AI Assistant</h1>
-        <p className="text-text-secondary text-sm">Your study chatbot.</p>
-      </div>
-      <Card className="flex flex-col items-center gap-3 py-16 text-center">
-        <div className="bg-accent-primary/10 flex h-14 w-14 items-center justify-center rounded-full">
-          <MessageSquare className="text-accent-primary h-7 w-7" strokeWidth={1.5} />
-        </div>
-        <h2 className="font-display text-text-primary text-lg font-semibold">Coming soon</h2>
-        <p className="text-text-secondary max-w-sm text-sm">
-          The AI study assistant chatbot hasn&apos;t been built yet — it&apos;s next up.
-        </p>
-      </Card>
-    </div>
-  );
+export default async function AssistantPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const [{ data: subjects }, { data: topics }] = await Promise.all([
+    supabase
+      .from("subjects")
+      .select("id, name")
+      .eq("user_id", user.id)
+      .order("name", { ascending: true }),
+    supabase.from("topics").select("id, subject_id, title, unit_no").order("unit_no"),
+  ]);
+
+  const topicsBySubject = new Map<string, string[]>();
+  for (const t of topics ?? []) {
+    const list = topicsBySubject.get(t.subject_id) ?? [];
+    list.push(t.title);
+    topicsBySubject.set(t.subject_id, list);
+  }
+
+  const assistantSubjects: AssistantSubjectData[] = (subjects ?? []).map((s) => ({
+    id: s.id,
+    name: s.name,
+    topicTitles: topicsBySubject.get(s.id) ?? [],
+  }));
+
+  return <AssistantShell subjects={assistantSubjects} />;
 }

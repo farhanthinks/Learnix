@@ -34,6 +34,8 @@ export interface PlanRowInput {
   subject_slug: string;
   subject_name: string;
   subject_slot_start_time: string | null;
+  start_time: string | null;
+  end_time: string | null;
   topic_id: string;
   topic_slug: string;
   topic_title: string;
@@ -92,7 +94,13 @@ export function formatTime12(hhmm: string): string {
 }
 
 export function planRowToSession(row: PlanRowInput): CalendarSession {
-  const start = (row.subject_slot_start_time ?? FALLBACK_START_TIME).slice(0, 5);
+  // Newer rows carry their own chained start/end time (see generate-plan.ts);
+  // older rows predate that and fall back to the subject's slot start, same
+  // as before — every same-day row independently "starting" there, which is
+  // only accurate when a day has just one row.
+  const start =
+    row.start_time?.slice(0, 5) ?? (row.subject_slot_start_time ?? FALLBACK_START_TIME).slice(0, 5);
+  const end = row.end_time?.slice(0, 5) ?? addMinutesToTime(start, row.planned_minutes);
   return {
     id: `plan:${row.id}`,
     rawId: row.id,
@@ -105,7 +113,7 @@ export function planRowToSession(row: PlanRowInput): CalendarSession {
     topicSlug: row.topic_slug,
     date: row.scheduled_date,
     startTime: start,
-    endTime: addMinutesToTime(start, row.planned_minutes),
+    endTime: end,
     type: "study",
     difficulty: row.topic_difficulty,
     status: row.topic_status,

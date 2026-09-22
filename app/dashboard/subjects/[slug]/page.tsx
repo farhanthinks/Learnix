@@ -8,7 +8,7 @@ import { ExportIcsButton } from "@/components/subjects/export-ics-button";
 import { GeneratePlanButton } from "@/components/subjects/generate-plan-button";
 import { ProgressBar } from "@/components/subjects/progress-bar";
 import { ReextractButton } from "@/components/subjects/reextract-button";
-import { SubjectSlotCard } from "@/components/subjects/subject-slot-card";
+import { StudyPreferencesCard } from "@/components/subjects/study-preferences-card";
 import { TopicsBoard } from "@/components/subjects/topics-board";
 import { Card } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
@@ -52,14 +52,15 @@ export default async function SubjectPage({ params }: { params: Promise<{ slug: 
   const topicCount = topics?.length ?? 0;
   const doneCount = topics?.filter((t) => t.status === "done").length ?? 0;
   const hasExistingPlan = (planCount ?? 0) > 0;
+  const hasSlot = Boolean(
+    subject.slot_start_time && subject.slot_end_time && subject.slot_days?.length,
+  );
 
   let disabledReason: string | undefined;
   if (!subject.exam_date) {
     disabledReason = "Set an exam date to generate a plan.";
   } else if (topicCount === 0) {
     disabledReason = "Extract topics from a syllabus first.";
-  } else if (!subject.slot_start_time || !subject.slot_end_time || !subject.slot_days?.length) {
-    disabledReason = "Set a daily study time slot for this subject before generating a plan.";
   }
 
   return (
@@ -88,11 +89,13 @@ export default async function SubjectPage({ params }: { params: Promise<{ slug: 
         <div className="flex flex-col items-end gap-2">
           <div className="flex items-center gap-2">
             <ReextractButton subjectId={subject.id} />
-            <GeneratePlanButton
-              subjectId={subject.id}
-              hasExistingPlan={hasExistingPlan}
-              disabledReason={disabledReason}
-            />
+            {hasSlot && (
+              <GeneratePlanButton
+                subjectId={subject.id}
+                hasExistingPlan={hasExistingPlan}
+                disabledReason={disabledReason}
+              />
+            )}
             <ExportIcsButton
               href={`/api/export/ics?subject_id=${subject.id}`}
               label="Export to Calendar"
@@ -118,11 +121,15 @@ export default async function SubjectPage({ params }: { params: Promise<{ slug: 
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
-          <SubjectSlotCard
+          <StudyPreferencesCard
             subjectId={subject.id}
+            disabledReason={disabledReason}
             slotStartTime={subject.slot_start_time}
             slotEndTime={subject.slot_end_time}
             slotDays={subject.slot_days}
+            breakEnabled={subject.break_enabled}
+            breakMinutes={subject.break_minutes}
+            breakFrequency={subject.break_frequency}
           />
         </Card>
 

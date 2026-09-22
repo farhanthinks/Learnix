@@ -7,6 +7,7 @@ export const TYPE_LABELS: Record<CalendarEventType, string> = {
   practice: "Practice",
   exam: "Exam",
   other: "Other",
+  break: "Break",
 };
 
 export const DIFFICULTY_LABELS: Record<TopicDifficulty, string> = {

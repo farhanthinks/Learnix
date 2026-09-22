@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { TimeSlotFields } from "@/components/subjects/time-slot-fields";
 import { Button } from "@/components/ui/button";
 import { FormError } from "@/components/ui/form-error";
 import { Input } from "@/components/ui/input";
@@ -22,9 +21,6 @@ export function SubjectForm() {
     const formData = new FormData(form);
     const name = String(formData.get("name") ?? "").trim();
     const file = formData.get("syllabus");
-    const slotStartTime = String(formData.get("slotStartTime") ?? "");
-    const slotEndTime = String(formData.get("slotEndTime") ?? "");
-    const slotDays = formData.getAll("slotDays").map(String);
 
     if (!name) {
       setError("Please enter a subject name.");
@@ -40,18 +36,6 @@ export function SubjectForm() {
     }
     if (file.size > MAX_SYLLABUS_FILE_SIZE) {
       setError("File is too large. Max size is 10MB.");
-      return;
-    }
-    if (!slotStartTime || !slotEndTime) {
-      setError("Please set a daily study start and end time.");
-      return;
-    }
-    if (slotStartTime >= slotEndTime) {
-      setError("End time must be after start time.");
-      return;
-    }
-    if (slotDays.length === 0) {
-      setError("Please select at least one study day.");
       return;
     }
 
@@ -89,13 +73,6 @@ export function SubjectForm() {
         name="examDate"
         type="date"
         label="Exam date (optional)"
-        disabled={isSubmitting}
-      />
-
-      <TimeSlotFields
-        defaultStartTime="18:00"
-        defaultEndTime="20:00"
-        defaultDays={["mon", "tue", "wed", "thu", "fri", "sat", "sun"]}
         disabled={isSubmitting}
       />
 

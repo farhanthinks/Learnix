@@ -1,3 +1,4 @@
+import { Calendar } from "lucide-react";
 import { redirect } from "next/navigation";
 
 import { AnalyticsPreviewTile } from "@/components/dashboard/analytics-preview-tile";
@@ -9,6 +10,7 @@ import { StudyTimeWeekCard } from "@/components/dashboard/study-time-week-card";
 import { SubjectsTile, type DashboardSubject } from "@/components/dashboard/subjects-tile";
 import { TodayPlanTile, type TodayPlanItem } from "@/components/dashboard/today-plan-tile";
 import { TopicProgressTile } from "@/components/dashboard/topic-progress-tile";
+import { computeLongestStreak, computeStreak } from "@/lib/study-plan/streak";
 import { createClient } from "@/lib/supabase/server";
 
 function todayString(): string {
@@ -31,10 +33,11 @@ export default async function DashboardPage() {
   }
 
   const today = todayString();
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-  const sevenDaysAgoStr = toDateString(sevenDaysAgo);
-
+  const todayLabel = new Date().toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
   const [subjectsRes, todayPlanRes, topicsRes, sessionsRes] = await Promise.all([
     supabase
       .from("subjects")
@@ -49,15 +52,19 @@ export default async function DashboardPage() {
       .eq("scheduled_date", today)
       .order("created_at", { ascending: true }),
     supabase.from("topics").select("subject_id, status"),
+    // Unfiltered by date (unlike the old query) so the streak can be computed
+    // from full history, not just the last 7 days — the 7-day chart/total
+    // below is derived from this same set by filtering in JS instead of
+    // running a second query against the same table.
     supabase
       .from("study_sessions")
       .select("started_at, duration_minutes")
-      .not("ended_at", "is", null)
-      .gte("started_at", `${sevenDaysAgoStr}T00:00:00.000Z`),
+      .not("ended_at", "is", null),
   ]);
 
   const subjects = subjectsRes.data ?? [];
   const allTopics = topicsRes.data ?? [];
+  const allSessions = sessionsRes.data ?? [];
 
   const topicsBySubject = new Map<string, { done: number; total: number }>();
   for (const topic of allTopics) {
@@ -98,7 +105,7 @@ export default async function DashboardPage() {
   const pendingCount = allTopics.filter((t) => t.status === "pending").length;
 
   const minutesByDay = new Map<string, number>();
-  for (const session of sessionsRes.data ?? []) {
+  for (const session of allSessions) {
     const day = session.started_at.slice(0, 10);
     minutesByDay.set(day, (minutesByDay.get(day) ?? 0) + (session.duration_minutes ?? 0));
   }
@@ -110,35 +117,43 @@ export default async function DashboardPage() {
   });
   const weekMinutes = weekly.reduce((sum, w) => sum + w.minutes, 0);
 
+  const studiedDates = new Set(allSessions.map((s) => s.started_at.slice(0, 10)));
+  const currentStreak = computeStreak(studiedDates, today);
+  const bestStreak = computeLongestStreak(studiedDates);
+
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-8 py-8">
-      <div>
-        <h1 className="font-display text-text-primary text-2xl font-bold">Dashboard</h1>
-        <p className="text-text-secondary text-sm">Welcome back!</p>
+    <div className="mx-auto flex w-full max-w-[1360px] flex-1 flex-col gap-6 px-8 py-8">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-text-primary text-[28px] font-bold">Dashboard</h1>
+          <p className="text-text-secondary text-sm">
+            Welcome back! Keep up with your study goals.
+          </p>
+        </div>
+        <span className="border-border text-text-secondary inline-flex w-auto items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium">
+          <Calendar className="h-4 w-4" strokeWidth={2} />
+          {todayLabel}
+        </span>
       </div>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <ExamCountdownTile subjects={subjects} />
         <OverallProgressCard done={doneCount} total={allTopics.length} />
-        <StudyStreakCard />
+        <StudyStreakCard currentStreak={currentStreak} bestStreak={bestStreak} />
         <StudyTimeWeekCard minutes={weekMinutes} />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
-        <SubjectsTile
-          className="lg:col-span-7 lg:row-span-2 lg:row-start-1"
-          subjects={dashboardSubjects}
-        />
-        <TodayPlanTile className="lg:col-span-5 lg:row-start-1" items={todayPlanItems} />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.3fr_1fr]">
+        <SubjectsTile subjects={dashboardSubjects} />
+        <TodayPlanTile items={todayPlanItems} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1.2fr_1.3fr]">
         <TopicProgressTile
-          className="lg:col-span-5 lg:row-start-2"
           completed={doneCount}
           inProgress={inProgressCount}
           pending={pendingCount}
         />
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <AnalyticsPreviewTile weekly={weekly} />
         <QuickActionsTile />
       </div>

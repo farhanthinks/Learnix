@@ -49,7 +49,16 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   const examDate = new Date(`${subject.exam_date}T00:00:00`);
   const availableDays = getAvailableStudyDays(today, examDate, studyDays);
 
-  const result = generateStudyPlan(incompleteTopics, availableDays, dailyStudyMinutes);
+  // Rebalancing only re-lays-out the still-incomplete topics for this
+  // subject, not the whole day (which may also hold already-done topics'
+  // rows and break rows) — so it doesn't attempt break re-chaining here;
+  // Regenerate is the tool for a full day-by-day rebuild including breaks.
+  const result = generateStudyPlan(
+    incompleteTopics,
+    availableDays,
+    dailyStudyMinutes,
+    subject.slot_start_time.slice(0, 5),
+  );
   if (result.error || !result.sessions) {
     return NextResponse.json(
       { error: result.error ?? "Could not rebalance the plan." },
@@ -69,6 +78,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     topic_id: s.topic_id,
     scheduled_date: s.scheduled_date,
     planned_minutes: s.planned_minutes,
+    start_time: s.start_time,
+    end_time: s.end_time,
   }));
 
   const { error: insertError } = await supabase.from("study_plans").insert(rows);

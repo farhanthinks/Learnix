@@ -6,7 +6,8 @@ export type TopicStatus = "pending" | "in_progress" | "done";
 export type StudyDay = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 export type QuizQuestionType = "mcq" | "short_answer";
 export type QuizType = "topic" | "mock";
-export type CalendarEventType = "study" | "revision" | "practice" | "exam" | "other";
+export type CalendarEventType = "study" | "revision" | "practice" | "exam" | "other" | "break";
+export type ThemePreference = "light" | "dark" | "system";
 
 export interface Database {
   public: {
@@ -19,6 +20,10 @@ export interface Database {
           daily_study_minutes: number;
           study_days: string[];
           preferred_study_time: string;
+          study_reminders_enabled: boolean;
+          exam_reminders_enabled: boolean;
+          app_lock_enabled: boolean;
+          theme_preference: ThemePreference;
           created_at: string;
         };
         Insert: {
@@ -28,6 +33,10 @@ export interface Database {
           daily_study_minutes?: number;
           study_days?: string[];
           preferred_study_time?: string;
+          study_reminders_enabled?: boolean;
+          exam_reminders_enabled?: boolean;
+          app_lock_enabled?: boolean;
+          theme_preference?: ThemePreference;
           created_at?: string;
         };
         Update: {
@@ -37,6 +46,10 @@ export interface Database {
           daily_study_minutes?: number;
           study_days?: string[];
           preferred_study_time?: string;
+          study_reminders_enabled?: boolean;
+          exam_reminders_enabled?: boolean;
+          app_lock_enabled?: boolean;
+          theme_preference?: ThemePreference;
           created_at?: string;
         };
         Relationships: [];
@@ -55,6 +68,9 @@ export interface Database {
           slot_start_time: string | null;
           slot_end_time: string | null;
           slot_days: string[] | null;
+          break_enabled: boolean;
+          break_minutes: number | null;
+          break_frequency: number | null;
           created_at: string;
         };
         Insert: {
@@ -70,6 +86,9 @@ export interface Database {
           slot_start_time?: string | null;
           slot_end_time?: string | null;
           slot_days?: string[] | null;
+          break_enabled?: boolean;
+          break_minutes?: number | null;
+          break_frequency?: number | null;
           created_at?: string;
         };
         Update: {
@@ -85,6 +104,9 @@ export interface Database {
           slot_start_time?: string | null;
           slot_end_time?: string | null;
           slot_days?: string[] | null;
+          break_enabled?: boolean;
+          break_minutes?: number | null;
+          break_frequency?: number | null;
           created_at?: string;
         };
         Relationships: [];
@@ -143,6 +165,8 @@ export interface Database {
           topic_id: string;
           scheduled_date: string;
           planned_minutes: number;
+          start_time: string | null;
+          end_time: string | null;
           created_at: string;
         };
         Insert: {
@@ -151,6 +175,8 @@ export interface Database {
           topic_id: string;
           scheduled_date: string;
           planned_minutes?: number;
+          start_time?: string | null;
+          end_time?: string | null;
           created_at?: string;
         };
         Update: {
@@ -159,6 +185,8 @@ export interface Database {
           topic_id?: string;
           scheduled_date?: string;
           planned_minutes?: number;
+          start_time?: string | null;
+          end_time?: string | null;
           created_at?: string;
         };
         Relationships: [

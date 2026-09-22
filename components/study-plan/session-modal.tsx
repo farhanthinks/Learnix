@@ -15,6 +15,7 @@ const TYPE_OPTIONS: { value: CalendarEventType; label: string }[] = [
   { value: "practice", label: "Practice" },
   { value: "exam", label: "Exam" },
   { value: "other", label: "Other" },
+  { value: "break", label: "Break" },
 ];
 
 const DIFFICULTY_OPTIONS: { value: TopicDifficulty; label: string }[] = [

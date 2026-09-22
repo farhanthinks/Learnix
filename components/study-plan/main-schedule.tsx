@@ -73,6 +73,7 @@ export function MainSchedule({
 
   if (viewMode === "day") {
     const daySessions = sortByTime(sessions.filter((s) => s.date === selectedIso));
+    const studyCount = daySessions.filter((s) => s.type !== "break").length;
     const isToday = selectedIso === todayIso;
     const title = isToday
       ? "Today's Schedule"
@@ -83,7 +84,7 @@ export function MainSchedule({
         <div className="flex items-center justify-between">
           <h2 className="font-display text-text-primary text-base font-semibold">{title}</h2>
           <span className="bg-accent-primary/10 text-accent-primary rounded-full px-2.5 py-1 text-xs font-medium">
-            {daySessions.length} sessions
+            {studyCount} sessions
           </span>
         </div>
         {daySessions.length === 0 ? (
@@ -114,13 +115,14 @@ export function MainSchedule({
         {weekDays.map((d) => {
           const iso = formatDateISO(d);
           const daySessions = sortByTime(sessions.filter((s) => s.date === iso));
+          const studyCount = daySessions.filter((s) => s.type !== "break").length;
           return (
             <div key={iso}>
               <div className="border-border flex items-center justify-between border-b pb-1.5">
                 <p className="text-text-primary text-sm font-semibold">
                   {SHORT_WEEKDAY[d.getDay()]}, {formatShortDate(iso)}
                 </p>
-                <span className="text-text-secondary text-xs">{daySessions.length} sessions</span>
+                <span className="text-text-secondary text-xs">{studyCount} sessions</span>
               </div>
               {daySessions.length === 0 ? (
                 <p className="text-text-secondary py-3 text-xs">No sessions scheduled</p>
@@ -160,7 +162,8 @@ export function MainSchedule({
         <p className="text-text-secondary text-sm">No upcoming sessions.</p>
       ) : (
         groups.map(([date, daySessions]) => {
-          const totalMinutes = daySessions.reduce(
+          const studySessions = daySessions.filter((s) => s.type !== "break");
+          const totalMinutes = studySessions.reduce(
             (sum, s) => sum + (toMinutes(s.endTime) - toMinutes(s.startTime)),
             0,
           );
@@ -172,7 +175,7 @@ export function MainSchedule({
                   {label ? `${label} · ${formatShortDate(date)}` : formatShortDate(date)}
                 </p>
                 <span className="text-text-secondary text-xs">
-                  {daySessions.length} sessions · {formatDurationLabel(totalMinutes)}
+                  {studySessions.length} sessions · {formatDurationLabel(totalMinutes)}
                 </span>
               </div>
               {daySessions.map((s) => (

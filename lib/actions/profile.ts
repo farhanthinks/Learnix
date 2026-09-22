@@ -41,7 +41,7 @@ export async function updateProfile(
     return { error: "Could not save your profile. Please try again." };
   }
 
-  revalidatePath("/dashboard/profile");
+  revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard", "layout");
   return { success: true };
 }

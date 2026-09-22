@@ -52,7 +52,7 @@ export default async function StudyPlanPage({
     supabase
       .from("study_plans")
       .select(
-        "id, scheduled_date, planned_minutes, subject_id, topic_id, subjects(name, slug, slot_start_time), topics(title, slug, difficulty, status)",
+        "id, scheduled_date, planned_minutes, start_time, end_time, subject_id, topic_id, subjects(name, slug, slot_start_time), topics(title, slug, difficulty, status)",
       ),
     supabase
       .from("calendar_events")
@@ -76,6 +76,8 @@ export default async function StudyPlanPage({
       subject_slug: r.subjects!.slug,
       subject_name: r.subjects!.name,
       subject_slot_start_time: r.subjects!.slot_start_time,
+      start_time: r.start_time,
+      end_time: r.end_time,
       topic_id: r.topic_id,
       topic_slug: r.topics!.slug,
       topic_title: r.topics!.title,
@@ -113,7 +115,7 @@ export default async function StudyPlanPage({
   const topicsTotal = allTopics.length;
 
   const health = computeStudyPlanHealth(
-    sessions.map((s) => ({ date: s.date, status: s.status })),
+    sessions.filter((s) => s.type !== "break").map((s) => ({ date: s.date, status: s.status })),
     allTopics.map((t) => ({ status: t.status, difficulty: t.difficulty })),
     (subjects ?? []).map((s) => ({ name: s.name, examDate: s.exam_date })),
     todayIso,
