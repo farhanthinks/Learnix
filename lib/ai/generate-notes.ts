@@ -11,7 +11,8 @@ Match this exact shape:
   "summary": "...",
   "keyPoints": ["...", "..."],
   "examples": "...",
-  "qa": [{ "question": "...", "answer": "..." }]
+  "qa": [{ "question": "...", "answer": "..." }],
+  "textbookReferences": ["Book Title — Author Name", "..."]
 }
 
 Field rules:
@@ -20,6 +21,7 @@ Field rules:
 - "keyPoints": 5-8 short strings — important facts, definitions, formulas, or terminology. Each one sentence or a short phrase, no numbering.
 - "examples": Markdown — 2-4 concrete, practical, real-world examples or worked applications of this topic. Use "##" sub-headings per example if there's more than one.
 - "qa": 4-6 likely exam questions with concise but complete answers (2-4 sentences each).
+- "textbookReferences": 3-5 strings, each "Book Title — Author Name", naming real, well-known standard textbooks or academic references commonly used for this specific topic's subject area (e.g. "Computer Networks — Andrew S. Tanenbaum"). Only name real books you are confident actually exist and are genuinely relevant — never invent a fictitious title or author. If you cannot confidently name any, return an empty array rather than guessing.
 
 Base everything strictly on the given topic and subtopics — do not invent unrelated content. Output nothing outside the JSON object.`;
 
@@ -36,6 +38,7 @@ export interface GeneratedNotesContent {
   keyPoints: string[];
   examples: string;
   qa: { question: string; answer: string }[];
+  textbookReferences: string[];
 }
 
 export interface GenerateNotesResult {
@@ -49,6 +52,7 @@ interface RawNotesContent {
   keyPoints?: unknown;
   examples?: string;
   qa?: unknown;
+  textbookReferences?: unknown;
 }
 
 function stripCodeFences(raw: string): string {
@@ -98,7 +102,14 @@ function sanitize(raw: RawNotesContent | null): GeneratedNotesContent | null {
         .map((q) => ({ question: q.question.trim(), answer: q.answer.trim() }))
     : [];
 
-  return { studyNotes, summary, keyPoints, examples, qa };
+  const textbookReferences = Array.isArray(raw.textbookReferences)
+    ? raw.textbookReferences
+        .filter((r): r is string => typeof r === "string" && r.trim().length > 0)
+        .map((r) => r.trim())
+        .slice(0, 5)
+    : [];
+
+  return { studyNotes, summary, keyPoints, examples, qa, textbookReferences };
 }
 
 const UNAVAILABLE_ERROR =

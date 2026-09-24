@@ -80,7 +80,10 @@ export function AssistantShell({ subjects }: { subjects: AssistantSubjectData[] 
       }
       setConversations((prev) => ({
         ...prev,
-        [subjectId]: [...nextMessages, { role: "assistant", content: json.answer }],
+        [subjectId]: [
+          ...nextMessages,
+          { role: "assistant", content: json.answer, references: json.references ?? [] },
+        ],
       }));
     } catch {
       setError("Network error. Please try again.");

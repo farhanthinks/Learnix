@@ -5,6 +5,8 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { AnswerReferences } from "@/components/ui/answer-references";
+
 const SUGGESTIONS = [
   "Explain this topic simply",
   "Give me an example",
@@ -15,6 +17,7 @@ const SUGGESTIONS = [
 interface Message {
   role: "user" | "assistant";
   content: string;
+  references?: string[];
 }
 
 export function AskAiPanel({
@@ -58,7 +61,10 @@ export function AskAiPanel({
         setMessages(messages);
         return;
       }
-      setMessages([...nextMessages, { role: "assistant", content: json.answer }]);
+      setMessages([
+        ...nextMessages,
+        { role: "assistant", content: json.answer, references: json.references ?? [] },
+      ]);
     } catch {
       setError("Network error. Please try again.");
       setMessages(messages);
@@ -129,9 +135,12 @@ export function AskAiPanel({
                   }`}
                 >
                   {m.role === "assistant" ? (
-                    <div className="prose prose-sm prose-p:my-1 prose-strong:text-text-primary max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                    </div>
+                    <>
+                      <div className="prose prose-sm prose-p:my-1 prose-strong:text-text-primary max-w-none">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
+                      </div>
+                      <AnswerReferences references={m.references ?? []} />
+                    </>
                   ) : (
                     m.content
                   )}

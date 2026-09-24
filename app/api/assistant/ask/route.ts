@@ -1,6 +1,8 @@
 import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
 
+import { describeGroqError } from "@/lib/ai/groq-error";
+import { sanitizeAskResponse, tryParseAskResponse } from "@/lib/ai/parse-ask-response";
 import { matchTopics } from "@/lib/assistant/match-topics";
 import { createClient } from "@/lib/supabase/server";
 
@@ -45,10 +47,10 @@ export async function POST(request: Request) {
     : [];
 
   const [{ data: subject }, { data: topics }] = await Promise.all([
-    supabase.from("subjects").select("id, name, exam_date").eq("id", subjectId).single(),
+    supabase.from("subjects").select("id, slug, name, exam_date").eq("id", subjectId).single(),
     supabase
       .from("topics")
-      .select("id, title, unit_no, unit_title, difficulty")
+      .select("id, slug, title, unit_no, unit_title, difficulty")
       .eq("subject_id", subjectId)
       .order("unit_no", { ascending: true }),
   ]);
@@ -73,7 +75,8 @@ export async function POST(request: Request) {
     notesContext = matched
       .map((t) => {
         const content = notesByTopicId.get(t.id);
-        return content ? `### ${t.title}\n${content.slice(0, NOTES_CHAR_LIMIT)}` : "";
+        if (!content) return "";
+        return `### ${t.title}\n${content.slice(0, NOTES_CHAR_LIMIT)}`;
       })
       .filter(Boolean)
       .join("\n\n");
@@ -102,38 +105,62 @@ export async function POST(request: Request) {
     `You can: explain concepts, simplify difficult topics, give examples, compare concepts, generate exam-ready answers, summarize topics, create practice questions, and explain step-by-step — whichever the student's question calls for.`,
     `Stay strictly within "${subject.name}" and its syllabus above. If the question is clearly unrelated to this subject (e.g. about a different subject, or nothing academic), do not answer it — politely say it looks unrelated to "${subject.name}" and ask whether they'd like to switch subjects or ask something about "${subject.name}" instead.`,
     `Format answers in Markdown: use headings, bullet points, numbered steps, code blocks, and tables where they genuinely help. Keep answers clear and student-friendly — no unnecessary padding.`,
+    'Reply with STRICT JSON ONLY — no markdown fences, no commentary before or after: { "answer": "markdown-formatted answer to the question", "references": ["Book Title — Author Name", ...] }',
+    '"answer" is Markdown. "references" is 0-3 real, well-known textbooks or academic references relevant to this question\'s topic within the subject (e.g. "Computer Networks — Andrew S. Tanenbaum"). Only include books you are confident are real and relevant — never invent a title or author; return an empty array if none come to mind confidently.',
   ]
     .filter(Boolean)
     .join("\n\n");
 
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  const messages: Groq.Chat.ChatCompletionMessageParam[] = [
+    { role: "system", content: systemPrompt },
+    ...history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
+    { role: "user", content: question },
+  ];
 
   try {
     const completion = await groq.chat.completions.create({
       model: MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
-        { role: "user", content: question },
-      ],
+      messages,
       temperature: 0.5,
       max_completion_tokens: 2048,
       reasoning_effort: "low",
       reasoning_format: "hidden",
     });
 
-    const answer = completion.choices[0]?.message?.content?.trim();
-    if (!answer) {
+    let result = sanitizeAskResponse(tryParseAskResponse(completion.choices[0]?.message?.content));
+
+    if (!result) {
+      const retryCompletion = await groq.chat.completions.create({
+        model: MODEL,
+        temperature: 0.5,
+        max_completion_tokens: 2048,
+        reasoning_effort: "low",
+        reasoning_format: "hidden",
+        messages: [
+          ...messages,
+          { role: "assistant", content: completion.choices[0]?.message?.content ?? "" },
+          {
+            role: "user",
+            content:
+              "Your previous response was not valid JSON matching the required shape. Reply again with ONLY the corrected JSON object — no markdown, no explanation.",
+          },
+        ],
+      });
+      result = sanitizeAskResponse(
+        tryParseAskResponse(retryCompletion.choices[0]?.message?.content),
+      );
+    }
+
+    if (!result) {
       return NextResponse.json(
         { error: "The AI didn't return an answer. Please try again." },
         { status: 502 },
       );
     }
-    return NextResponse.json({ answer });
-  } catch {
-    return NextResponse.json(
-      { error: "The AI service is temporarily unavailable. Please try again in a moment." },
-      { status: 502 },
-    );
+    return NextResponse.json(result);
+  } catch (err) {
+    const { status, error } = describeGroqError(err, "assistant-ask");
+    return NextResponse.json({ error }, { status });
   }
 }

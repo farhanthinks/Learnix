@@ -51,6 +51,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     key_points: data.keyPoints,
     examples: data.examples,
     qa: data.qa,
+    textbook_references: data.textbookReferences,
     generated_at: new Date().toISOString(),
   };
 

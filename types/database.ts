@@ -253,6 +253,7 @@ export interface Database {
           key_points: string[] | null;
           examples: string | null;
           qa: Json | null;
+          textbook_references: string[] | null;
           is_saved: boolean;
           generated_at: string;
         };
@@ -264,6 +265,7 @@ export interface Database {
           key_points?: string[] | null;
           examples?: string | null;
           qa?: Json | null;
+          textbook_references?: string[] | null;
           is_saved?: boolean;
           generated_at?: string;
         };
@@ -275,6 +277,7 @@ export interface Database {
           key_points?: string[] | null;
           examples?: string | null;
           qa?: Json | null;
+          textbook_references?: string[] | null;
           is_saved?: boolean;
           generated_at?: string;
         };

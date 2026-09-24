@@ -1,6 +1,6 @@
 import { PDFParse } from "pdf-parse";
 
-const MAX_CHARS = 60000; // keeps the Groq prompt + response comfortably within context limits
+const MAX_CHARS = 100000; // keeps the Groq prompt + response comfortably within context limits
 const MIN_TEXT_LENGTH = 40; // below this, treat the PDF as scanned/image-only
 
 export interface ExtractTextResult {

@@ -34,7 +34,9 @@ export default async function AnswerBookPage({
 
   const { data: notesRow } = await supabase
     .from("topic_notes")
-    .select("content, summary, key_points, examples, qa, is_saved, generated_at")
+    .select(
+      "content, summary, key_points, examples, qa, textbook_references, is_saved, generated_at",
+    )
     .eq("topic_id", topic.id)
     .maybeSingle();
 
@@ -47,6 +49,7 @@ export default async function AnswerBookPage({
         qa: Array.isArray(notesRow.qa)
           ? (notesRow.qa as unknown as { question: string; answer: string }[])
           : [],
+        textbookReferences: notesRow.textbook_references ?? [],
         generatedAt: notesRow.generated_at,
         isSaved: notesRow.is_saved,
       }

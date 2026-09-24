@@ -33,6 +33,7 @@ export function GenerateNotesPrompt({
         keyPoints: json.notes.key_points ?? [],
         examples: json.notes.examples,
         qa: json.notes.qa ?? [],
+        textbookReferences: json.notes.textbook_references ?? [],
         generatedAt: json.notes.generated_at,
         isSaved: json.notes.is_saved ?? false,
       });

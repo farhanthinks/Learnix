@@ -9,6 +9,7 @@ import { ExamplesTab } from "@/components/answer-book/examples-tab";
 import { GenerateNotesPrompt } from "@/components/answer-book/generate-notes-prompt";
 import { KeyPointsTab } from "@/components/answer-book/key-points-tab";
 import { QaTab } from "@/components/answer-book/qa-tab";
+import { ReferencesTab } from "@/components/answer-book/references-tab";
 import { StudyNotesTab } from "@/components/answer-book/study-notes-tab";
 import { SummaryTab } from "@/components/answer-book/summary-tab";
 import { TocSidebar } from "@/components/answer-book/toc-sidebar";
@@ -25,11 +26,12 @@ export interface TopicNotesData {
   keyPoints: string[];
   examples: string;
   qa: { question: string; answer: string }[];
+  textbookReferences: string[];
   generatedAt: string | null;
   isSaved: boolean;
 }
 
-type TabKey = "notes" | "summary" | "keypoints" | "examples" | "qa";
+type TabKey = "notes" | "summary" | "keypoints" | "examples" | "qa" | "references";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "notes", label: "Study Notes" },
@@ -37,6 +39,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "keypoints", label: "Key Points" },
   { key: "qa", label: "Important Q&A" },
   { key: "examples", label: "Examples" },
+  { key: "references", label: "References" },
 ];
 
 export function AnswerBookShell({
@@ -107,6 +110,7 @@ export function AnswerBookShell({
         keyPoints: json.notes.key_points ?? [],
         examples: json.notes.examples,
         qa: json.notes.qa ?? [],
+        textbookReferences: json.notes.textbook_references ?? [],
         generatedAt: json.notes.generated_at,
         isSaved: json.notes.is_saved ?? false,
       });
@@ -288,6 +292,12 @@ export function AnswerBookShell({
             {activeTab === "examples" &&
               (notes ? (
                 <ExamplesTab markdown={notes.examples} />
+              ) : (
+                <EmptyTabPlaceholder onGoToNotes={() => setActiveTab("notes")} />
+              ))}
+            {activeTab === "references" &&
+              (notes ? (
+                <ReferencesTab references={notes.textbookReferences} />
               ) : (
                 <EmptyTabPlaceholder onGoToNotes={() => setActiveTab("notes")} />
               ))}
