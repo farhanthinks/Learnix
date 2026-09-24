@@ -1,5 +1,7 @@
 import Groq from "groq-sdk";
 
+import { describeGroqError } from "@/lib/ai/groq-error";
+
 const MODEL = "openai/gpt-oss-120b";
 const MIN_USABLE_QUESTIONS = 3;
 
@@ -127,13 +129,15 @@ function sanitizeAll(raw: RawQuizQuestion[]): SanitizedQuizQuestion[] {
   return sanitized;
 }
 
-const UNAVAILABLE_ERROR =
-  "The AI service is temporarily unavailable. Please try Regenerate in a moment.";
-
 export async function generateQuizWithGroq(
   params: GenerateQuizParams,
 ): Promise<GenerateQuizResult> {
-  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  let groq: Groq;
+  try {
+    groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  } catch (err) {
+    return { error: describeGroqError(err, "generate-quiz").error };
+  }
 
   const userPrompt = [
     `Unit: ${params.unitTitle || "(untitled)"}`,
@@ -162,8 +166,8 @@ export async function generateQuizWithGroq(
       reasoning_format: "hidden",
     });
     raw = completion.choices[0]?.message?.content ?? "";
-  } catch {
-    return { error: UNAVAILABLE_ERROR };
+  } catch (err) {
+    return { error: describeGroqError(err, "generate-quiz").error };
   }
 
   let parsedRaw = tryParse(raw);
@@ -190,8 +194,8 @@ export async function generateQuizWithGroq(
       const retryRaw = retryCompletion.choices[0]?.message?.content ?? "";
       parsedRaw = tryParse(retryRaw);
       sanitized = parsedRaw ? sanitizeAll(parsedRaw) : [];
-    } catch {
-      return { error: UNAVAILABLE_ERROR };
+    } catch (err) {
+      return { error: describeGroqError(err, "generate-quiz").error };
     }
   }
 

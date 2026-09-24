@@ -1,5 +1,7 @@
 import Groq from "groq-sdk";
 
+import { describeGroqError } from "@/lib/ai/groq-error";
+
 const MODEL = "openai/gpt-oss-120b";
 
 const SYSTEM_PROMPT = `You are an expert exam question writer. Given a numbered list of syllabus topics for a subject, generate a full-syllabus mock test.
@@ -142,13 +144,15 @@ function sanitizeAll(raw: RawMockQuestion[], topics: MockQuizTopic[]): Sanitized
   return sanitized;
 }
 
-const UNAVAILABLE_ERROR =
-  "The AI service is temporarily unavailable. Please try Regenerate in a moment.";
-
 export async function generateMockQuizWithGroq(
   params: GenerateMockQuizParams,
 ): Promise<GenerateMockQuizResult> {
-  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  let groq: Groq;
+  try {
+    groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  } catch (err) {
+    return { error: describeGroqError(err, "generate-mock-quiz").error };
+  }
   const minUsable = Math.max(8, Math.round(params.targetQuestionCount * 0.6));
 
   const topicList = params.topics.map((t, i) => `${i}. ${t.title}`).join("\n");
@@ -175,8 +179,8 @@ export async function generateMockQuizWithGroq(
       reasoning_format: "hidden",
     });
     raw = completion.choices[0]?.message?.content ?? "";
-  } catch {
-    return { error: UNAVAILABLE_ERROR };
+  } catch (err) {
+    return { error: describeGroqError(err, "generate-mock-quiz").error };
   }
 
   let parsedRaw = tryParse(raw);
@@ -203,8 +207,8 @@ export async function generateMockQuizWithGroq(
       const retryRaw = retryCompletion.choices[0]?.message?.content ?? "";
       parsedRaw = tryParse(retryRaw);
       sanitized = parsedRaw ? sanitizeAll(parsedRaw, params.topics) : [];
-    } catch {
-      return { error: UNAVAILABLE_ERROR };
+    } catch (err) {
+      return { error: describeGroqError(err, "generate-mock-quiz").error };
     }
   }
 

@@ -1,5 +1,7 @@
 import Groq from "groq-sdk";
 
+import { describeGroqError } from "@/lib/ai/groq-error";
+
 const MODEL = "openai/gpt-oss-120b";
 const MIN_STUDY_NOTES_LENGTH = 80;
 
@@ -112,13 +114,15 @@ function sanitize(raw: RawNotesContent | null): GeneratedNotesContent | null {
   return { studyNotes, summary, keyPoints, examples, qa, textbookReferences };
 }
 
-const UNAVAILABLE_ERROR =
-  "The AI service is temporarily unavailable. Please try Regenerate in a moment.";
-
 export async function generateTopicNotes(
   params: GenerateNotesParams,
 ): Promise<GenerateNotesResult> {
-  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  let groq: Groq;
+  try {
+    groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  } catch (err) {
+    return { error: describeGroqError(err, "generate-notes").error };
+  }
 
   const userPrompt = [
     `Unit: ${params.unitTitle || "(untitled)"}`,
@@ -147,8 +151,8 @@ export async function generateTopicNotes(
       reasoning_format: "hidden",
     });
     raw = completion.choices[0]?.message?.content ?? "";
-  } catch {
-    return { error: UNAVAILABLE_ERROR };
+  } catch (err) {
+    return { error: describeGroqError(err, "generate-notes").error };
   }
 
   let data = sanitize(tryParse(raw));
@@ -173,8 +177,8 @@ export async function generateTopicNotes(
       });
       const retryRaw = retryCompletion.choices[0]?.message?.content ?? "";
       data = sanitize(tryParse(retryRaw));
-    } catch {
-      return { error: UNAVAILABLE_ERROR };
+    } catch (err) {
+      return { error: describeGroqError(err, "generate-notes").error };
     }
   }
 

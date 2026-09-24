@@ -90,7 +90,12 @@ function tryParse(raw: string): ExtractedSyllabus | null {
 }
 
 export async function extractTopicsWithGroq(syllabusText: string): Promise<ExtractTopicsResult> {
-  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  let groq: Groq;
+  try {
+    groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  } catch (err) {
+    return { error: describeGroqError(err, "extract-topics").error };
+  }
 
   const messages: Groq.Chat.ChatCompletionMessageParam[] = [
     { role: "system", content: SYSTEM_PROMPT },

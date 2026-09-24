@@ -111,7 +111,6 @@ export async function POST(request: Request) {
     .filter(Boolean)
     .join("\n\n");
 
-  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
   const messages: Groq.Chat.ChatCompletionMessageParam[] = [
     { role: "system", content: systemPrompt },
     ...history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
@@ -119,6 +118,7 @@ export async function POST(request: Request) {
   ];
 
   try {
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const completion = await groq.chat.completions.create({
       model: MODEL,
       messages,
